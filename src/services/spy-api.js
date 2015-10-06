@@ -5,54 +5,56 @@ angular.module('duScroll.spyAPI', ['duScroll.scrollContainerAPI'])
   var createScrollHandler = function(context) {
     var timer = false, queued = false;
     var handler = function() {
-      queued = false;
-      var container = context.container,
-          containerEl = container[0],
-          containerOffset = 0,
-          bottomReached;
-
-      if (typeof HTMLElement !== 'undefined' && containerEl instanceof HTMLElement || containerEl.nodeType && containerEl.nodeType === containerEl.ELEMENT_NODE) {
-        containerOffset = containerEl.getBoundingClientRect().top;
-        bottomReached = Math.round(containerEl.scrollTop + containerEl.clientHeight) >= containerEl.scrollHeight;
-      } else {
-        bottomReached = Math.round($window.pageYOffset + $window.innerHeight) >= $document[0].body.scrollHeight;
-      }
-      var compareProperty = (duScrollBottomSpy && bottomReached ? 'bottom' : 'top');
-
-      var i, currentlyActive, toBeActive, spies, spy, pos;
-      spies = context.spies;
-      currentlyActive = context.currentlyActive;
-      toBeActive = undefined;
-
-      for(i = 0; i < spies.length; i++) {
-        spy = spies[i];
-        pos = spy.getTargetPosition();
-        if (!pos) continue;
-
-        if((duScrollBottomSpy && bottomReached) || (pos.top + spy.offset - containerOffset < 20 && (duScrollGreedy || pos.top*-1 + containerOffset) < pos.height)) {
-          //Find the one closest the viewport top or the page bottom if it's reached
-          if(!toBeActive || toBeActive[compareProperty] < pos[compareProperty]) {
-            toBeActive = {
-              spy: spy
-            };
-            toBeActive[compareProperty] = pos[compareProperty];
+      if (context && context.container && context.container.length > 0) {
+        queued = false;
+        var container = context.container,
+            containerEl = container[0],
+            containerOffset = 0,
+            bottomReached;
+  
+        if (typeof HTMLElement !== 'undefined' && containerEl instanceof HTMLElement || containerEl.nodeType && containerEl.nodeType === containerEl.ELEMENT_NODE) {
+          containerOffset = containerEl.getBoundingClientRect().top;
+          bottomReached = Math.round(containerEl.scrollTop + containerEl.clientHeight) >= containerEl.scrollHeight;
+        } else {
+          bottomReached = Math.round($window.pageYOffset + $window.innerHeight) >= $document[0].body.scrollHeight;
+        }
+        var compareProperty = (duScrollBottomSpy && bottomReached ? 'bottom' : 'top');
+  
+        var i, currentlyActive, toBeActive, spies, spy, pos;
+        spies = context.spies;
+        currentlyActive = context.currentlyActive;
+        toBeActive = undefined;
+  
+        for(i = 0; i < spies.length; i++) {
+          spy = spies[i];
+          pos = spy.getTargetPosition();
+          if (!pos) continue;
+  
+          if((duScrollBottomSpy && bottomReached) || (pos.top + spy.offset - containerOffset < 20 && (duScrollGreedy || pos.top*-1 + containerOffset) < pos.height)) {
+            //Find the one closest the viewport top or the page bottom if it's reached
+            if(!toBeActive || toBeActive[compareProperty] < pos[compareProperty]) {
+              toBeActive = {
+                spy: spy
+              };
+              toBeActive[compareProperty] = pos[compareProperty];
+            }
           }
         }
+  
+        if(toBeActive) {
+          toBeActive = toBeActive.spy;
+        }
+        if(currentlyActive === toBeActive || (duScrollGreedy && !toBeActive)) return;
+        if(currentlyActive) {
+          currentlyActive.$element.removeClass(duScrollActiveClass);
+          $rootScope.$broadcast('duScrollspy:becameInactive', currentlyActive.$element);
+        }
+        if(toBeActive) {
+          toBeActive.$element.addClass(duScrollActiveClass);
+          $rootScope.$broadcast('duScrollspy:becameActive', toBeActive.$element);
+        }
+        context.currentlyActive = toBeActive;
       }
-
-      if(toBeActive) {
-        toBeActive = toBeActive.spy;
-      }
-      if(currentlyActive === toBeActive || (duScrollGreedy && !toBeActive)) return;
-      if(currentlyActive) {
-        currentlyActive.$element.removeClass(duScrollActiveClass);
-        $rootScope.$broadcast('duScrollspy:becameInactive', currentlyActive.$element);
-      }
-      if(toBeActive) {
-        toBeActive.$element.addClass(duScrollActiveClass);
-        $rootScope.$broadcast('duScrollspy:becameActive', toBeActive.$element);
-      }
-      context.currentlyActive = toBeActive;
     };
 
     if(!duScrollSpyWait) {
